@@ -1,0 +1,91 @@
+/* ─────────────────────────────────────────────
+   PUBLIC PAGES STYLES (Services, Doctors, Guide, Contact)
+───────────────────────────────────────────── */
+
+/* Page Padding for Navbar */
+.public-page { padding-top: 100px; }
+
+/* 1. SERVICES VIEW */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-bottom: 6rem;
+}
+.service-card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-100);
+  transition: 0.3s;
+}
+.service-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
+.service-card__icon {
+  width: 60px; height: 60px; background: rgba(0, 71, 171, 0.1); color: var(--cobalt);
+  border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1.5rem;
+}
+.service-card__footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--gray-100); padding-top: 1.5rem; }
+.price { font-weight: 700; color: var(--cobalt); }
+
+.package-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 6rem; }
+.package-card { background: white; padding: 3rem; border-radius: var(--radius-xl); border: 1px solid var(--gray-100); position: relative; }
+.package-card.featured { border: 2px solid var(--cobalt); background: #f8faff; }
+.package-card h3 { font-size: 2rem; margin-bottom: 2rem; }
+.package-card ul { list-style: none; margin-bottom: 3rem; }
+.package-card li { margin-bottom: 1rem; color: var(--gray-500); display: flex; align-items: center; gap: 0.75rem; }
+.package-card li::before { content: '✓'; color: var(--cobalt); font-weight: 900; }
+.price-box { margin-bottom: 2.5rem; }
+.old-price { text-decoration: line-through; color: var(--gray-500); font-size: 1.2rem; margin-right: 1rem; }
+.new-price { font-size: 2.5rem; font-weight: 800; }
+
+/* 2. DOCTORS VIEW */
+.doctors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 2.5rem;
+  margin-bottom: 6rem;
+}
+.doctor-card { background: white; border-radius: var(--radius-xl); overflow: hidden; border: 1px solid var(--gray-100); transition: 0.3s; display: flex; flex-direction: column; }
+.doctor-card:hover { transform: translateY(-10px); box-shadow: 0 20px 50px rgba(0,0,0,0.08); }
+.doc-image { height: 200px; background: var(--gray-50); display: flex; align-items: center; justify-content: center; font-size: 5rem; color: #cbd5e1; }
+.doc-info { padding: 2.5rem; }
+.specialty { color: var(--cobalt); font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+.meta { display: flex; justify-content: space-between; margin-bottom: 2rem; font-size: 0.9rem; color: var(--gray-500); }
+.fa-star { color: #fbbf24; }
+
+.search-box {
+  background: white; border: 1px solid var(--gray-200); padding: 1rem 2rem; border-radius: 20px;
+  display: flex; align-items: center; gap: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-bottom: 2rem;
+}
+.search-box input { border: none; width: 100%; font-size: 1.1rem; outline: none; }
+
+.tabs { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem; }
+.tabs button { padding: 0.75rem 1.5rem; border-radius: 12px; border: 1px solid var(--gray-200); background: white; color: var(--gray-500); font-weight: 600; cursor: pointer; transition: 0.3s; white-space: nowrap; }
+.tabs button.active { background: var(--cobalt); color: white; border-color: var(--cobalt); }
+
+/* 3. GUIDE VIEW */
+.steps-section { display: flex; flex-direction: column; gap: 2rem; margin-bottom: 6rem; }
+.step-card { display: flex; gap: 3rem; background: white; padding: 3rem; border-radius: var(--radius-xl); border: 1px solid var(--gray-100); align-items: center; }
+.step-num { font-size: 5rem; font-weight: 900; color: rgba(0, 71, 171, 0.05); line-height: 1; }
+.step-icon { width: 50px; height: 50px; background: var(--cobalt); color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 1.5rem; }
+.step-features { list-style: none; display: flex; gap: 1.5rem; }
+.step-features li { font-size: 0.9rem; font-weight: 600; color: var(--cobalt); background: rgba(0,71,171,0.05); padding: 0.4rem 1rem; border-radius: 20px; }
+.faq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 6rem; }
+.faq-item { background: var(--gray-50); padding: 2rem; border-radius: var(--radius-lg); }
+
+/* 4. CONTACT VIEW */
+.contact-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 4rem; margin-bottom: 6rem; }
+.contact-form-box { background: white; padding: 3rem; border-radius: var(--radius-xl); border: 1px solid var(--gray-100); box-shadow: 0 10px 30px rgba(0,0,0,0.02); }
+.form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.form-group label { font-weight: 600; color: #475569; font-size: 0.9rem; }
+.form-group input, .form-group textarea { width: 100%; padding: 1rem; border: 1px solid var(--gray-200); border-radius: 12px; font-family: inherit; font-size: 1rem; transition: 0.3s; }
+.form-group input:focus, .form-group textarea:focus { border-color: var(--cobalt); outline: none; box-shadow: 0 0 0 4px rgba(0,71,171,0.05); }
+.info-item { display: flex; gap: 1.5rem; align-items: flex-start; margin-bottom: 2rem; }
+.info-icon { width: 50px; height: 50px; background: rgba(0,71,171,0.05); color: var(--cobalt); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+.working-hours { background: var(--gray-50); padding: 2rem; border-radius: var(--radius-lg); }
+.emergency { margin-top: 1rem; color: var(--red); font-weight: 800; font-size: 0.9rem; }
+
+@media (max-width: 992px) {
+  .contact-grid, .package-grid, .faq-grid { grid-template-columns: 1fr; }
+  .step-card { flex-direction: column; text-align: center; gap: 1rem; }
+}

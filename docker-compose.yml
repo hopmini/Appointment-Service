@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PostgreSQL cho Appointment Service
+  postgres-appointment:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "Medicare@2024"
+      POSTGRES_DB: "AppointmentDB"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-appointment-data:/var/lib/postgresql/data
+    networks:
+      - medicare-network
+
+  # Appointment Service (Backend)
+  appointment-service:
+    build:
+      context: ./application
+      dockerfile: Dockerfile
+    ports:
+      - "5150:5150"
+    environment:
+      CONNECTION_STRING: "Host=postgres-appointment;Port=5432;Database=AppointmentDB;Username=postgres;Password=Medicare@2024"
+      JWT_SECRET: "CaiNayLaBiMatQuocGiaSieuCapVipPro123!"
+      JWT_ISSUER: "ClinicAuthService"
+      JWT_AUDIENCE: "ClinicUsers"
+      GROQ_API_KEY: "${GROQ_API_KEY}"
+      MEDICAL_RECORD_SERVICE_URL: "http://medical-record-service:8001"
+      PHARMACY_SERVICE_URL: "http://pharmacy-service:8002"
+    depends_on:
+      - postgres-appointment
+    networks:
+      - medicare-network
+
+  # API Gateway (Ocelot)
+  gateway:
+    build:
+      context: ../medicare-portal/backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      JWT_SECRET: "CaiNayLaBiMatQuocGiaSieuCapVipPro123!"
+      JWT_ISSUER: "ClinicAuthService"
+      JWT_AUDIENCE: "ClinicUsers"
+    depends_on:
+      - appointment-service
+    networks:
+      - medicare-network
+
+  # Appointment Frontend (Vue.js)
+  appointment-frontend:
+    build:
+      context: ./static
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"
+    depends_on:
+      - gateway
+    networks:
+      - medicare-network
+
+networks:
+  medicare-network:
+    driver: bridge
+
+volumes:
+  postgres-appointment-data:
