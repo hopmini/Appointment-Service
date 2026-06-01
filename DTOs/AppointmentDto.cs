@@ -15,6 +15,7 @@ namespace AppointmentService.DTOs
         public Guid SlotId { get; set; }    // Slot vừa chọn
         public Guid MedicalServiceId { get; set; } // Dịch vụ khám chọn từ danh sách
         public string Reason { get; set; } = string.Empty;  // Triệu chứng nhức đầu sổ mũi...
+        public string PatientEmail { get; set; } = string.Empty; // Email liên hệ nhận kết quả
     }
 
     // DTO để cập nhật lý do khám bệnh
