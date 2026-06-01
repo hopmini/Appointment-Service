@@ -32,6 +32,11 @@ namespace AppointmentService.Services
                     string.IsNullOrEmpty(smtpHost) || string.IsNullOrEmpty(smtpPortStr))
                 {
                     Console.WriteLine("[WARNING] SMTP Configuration is missing or incomplete. Email sending is skipped.");
+                    Console.WriteLine("=================== [DEVELOPMENT EMAIL OUTBOX] ===================");
+                    Console.WriteLine($"TO: {toEmail}");
+                    Console.WriteLine($"SUBJECT: {subject}");
+                    Console.WriteLine($"BODY:\n{body}");
+                    Console.WriteLine("==================================================================");
                     return;
                 }
 
