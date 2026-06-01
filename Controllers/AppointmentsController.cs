@@ -88,6 +88,10 @@ namespace AppointmentService.Controllers
         {
             // 1. Kiểm tra bệnh nhân có tồn tại không (Đồng bộ động từ JWT Claims nếu chưa có)
             var patient = await _context.Users.FindAsync(request.PatientId);
+            var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                            ?? User.FindFirst("email")?.Value 
+                            ?? User.FindFirst("Email")?.Value;
+
             if (patient == null)
             {
                 var userName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? "patient";
@@ -98,10 +102,16 @@ namespace AppointmentService.Controllers
                     Username = userName,
                     PasswordHash = "",
                     FullName = fullName,
-                    Email = userName + "@medicare.vn",
+                    Email = !string.IsNullOrEmpty(userEmail) && userEmail.Contains("@") ? userEmail : userName + "@medicare.vn",
                     Role = "Patient"
                 };
                 _context.Users.Add(patient);
+                await _context.SaveChangesAsync();
+            }
+            else if (!string.IsNullOrEmpty(userEmail) && userEmail.Contains("@") && (string.IsNullOrEmpty(patient.Email) || patient.Email.EndsWith("@medicare.vn")))
+            {
+                // Tự động đồng bộ và chữa lành email thật nếu trước đó chỉ lưu email ảo!
+                patient.Email = userEmail;
                 await _context.SaveChangesAsync();
             }
 
@@ -228,70 +238,98 @@ namespace AppointmentService.Controllers
             if (!string.IsNullOrEmpty(targetEmail))
             {
                 string emailBody = $@"
-                <div style='margin: 0; padding: 0; background-color: #f4f7f6; font-family: ""Segoe UI"", Helvetica, Arial, sans-serif;'>
+                <div style='margin: 0; padding: 0; background-color: #f8fafc; font-family: ""Inter"", ""Segoe UI"", Helvetica, Arial, sans-serif;'>
                     <table border='0' cellpadding='0' cellspacing='0' width='100%'>
                         <tr>
-                            <td align='center' style='padding: 20px 10px;'>
-                                <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);'>
+                            <td align='center' style='padding: 40px 10px;'>
+                                <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,0.08); border: 1px solid #e2e8f0;'>
                                     <!-- Header -->
                                     <tr>
-                                        <td align='center' bgcolor='#0047AB' style='padding: 30px 20px;'>
-                                            <h1 style='color: #ffffff; margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 2px;'>Medicare Hospital</h1>
+                                        <td align='center' bgcolor='#2563eb' style='padding: 40px 20px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);'>
+                                            <div style='display: inline-block; background-color: rgba(255,255,255,0.15); padding: 12px; border-radius: 12px; margin-bottom: 12px;'>
+                                                <svg fill='none' viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' style='height: 32px; width: 32px; display: block;'>
+                                                    <rect fill='#ffffff' height='32' rx='8' width='32' />
+                                                    <path d='M16 6v20M6 16h20' stroke='#2563eb' stroke-linecap='round' stroke-width='4' />
+                                                </svg>
+                                            </div>
+                                            <h1 style='color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;'>MEDICARE HOSPITAL</h1>
+                                            <p style='color: rgba(255,255,255,0.85); margin: 6px 0 0 0; font-size: 14px; font-weight: 500;'>Cổng Chăm Sóc Sức Khỏe Toàn Diện</p>
                                         </td>
                                     </tr>
                                     <!-- Content -->
                                     <tr>
-                                        <td style='padding: 30px 20px;'>
-                                            <h2 style='color: #1e293b; font-size: 20px; margin-top: 0;'>Xác nhận lịch khám</h2>
-                                            <p style='color: #64748b; font-size: 15px; line-height: 1.6;'>Chào bạn,</p>
-                                            <p style='color: #64748b; font-size: 15px; line-height: 1.6;'>Lịch hẹn của bạn tại Medicare đã được phê duyệt thành công. Chi tiết như sau:</p>
+                                        <td style='padding: 40px 30px;'>
+                                            <h2 style='color: #0f172a; font-size: 22px; font-weight: 800; margin-top: 0; margin-bottom: 8px; letter-spacing: -0.5px;'>Lịch Hẹn Khám Được Phê Duyệt</h2>
+                                            <p style='color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0; font-weight: 500;'>Chào bạn, lịch đặt khám trực tuyến của bạn đã được tiếp nhận, phê duyệt và cấp số thứ tự thành công. Vui lòng kiểm tra chi tiết thông tin bên dưới:</p>
                                             
-                                            <table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #f8fafc; border-radius: 8px; margin: 20px 0;'>
+                                            <!-- Detail Box -->
+                                            <table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #f8fafc; border-radius: 12px; margin-bottom: 30px; border: 1px solid #f1f5f9;'>
                                                 <tr>
-                                                    <td style='padding: 20px;'>
-                                                        <p style='margin: 5px 0; font-size: 14px; color: #64748b;'>Mã lịch hẹn: <b style='color: #0f172a;'>#{appointment.Id.ToString().Substring(0, 8).ToUpper()}</b></p>
-                                                        <p style='margin: 5px 0; font-size: 12px; color: #94a3b8;'>Mã tra cứu (Full ID): {appointment.Id}</p>
-                                                        <p style='margin: 5px 0; font-size: 14px; color: #64748b;'>Ngày khám: <b style='color: #0f172a;'>{appointment.Slot.Date:dd/MM/yyyy}</b></p>
-                                                        <p style='margin: 5px 0; font-size: 14px; color: #64748b;'>Giờ khám: <b style='color: #0f172a;'>{appointment.Slot.StartTime:hh\:mm}</b></p>
-                                                        <div style='margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0;'>
-                                                            <p style='margin: 0; font-size: 14px; color: #64748b;'>Số thứ tự của bạn:</p>
-                                                            <p style='margin: 5px 0; font-size: 32px; font-weight: 900; color: #E53935;'>{appointment.QueueNumber}</p>
-                                                        </div>
+                                                    <td style='padding: 24px;'>
+                                                        <table border='0' cellpadding='0' cellspacing='0' width='100%'>
+                                                            <tr>
+                                                                <td style='padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0; font-size: 14px;'>
+                                                                    <span style='color: #64748b; font-weight: 600;'>Mã số lịch hẹn:</span>
+                                                                    <span style='float: right; color: #2563eb; font-weight: 800;'>#{appointment.Id.ToString().Substring(0, 8).ToUpper()}</span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style='padding: 12px 0; border-bottom: 1px dashed #e2e8f0; font-size: 14px;'>
+                                                                    <span style='color: #64748b; font-weight: 600;'>Ngày khám lâm sàng:</span>
+                                                                    <span style='float: right; color: #0f172a; font-weight: 750;'>{appointment.Slot.Date:dd/MM/yyyy}</span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style='padding: 12px 0; border-bottom: 1px dashed #e2e8f0; font-size: 14px;'>
+                                                                    <span style='color: #64748b; font-weight: 600;'>Giờ hẹn chi tiết:</span>
+                                                                    <span style='float: right; color: #0f172a; font-weight: 750;'>{appointment.Slot.StartTime:hh\:mm}</span>
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style='padding-top: 16px;'>
+                                                                    <span style='color: #64748b; font-size: 14px; font-weight: 600; display: block; margin-bottom: 6px;'>SỐ THỨ TỰ KHÁM CỦA BẠN:</span>
+                                                                    <div style='background-color: #f0fdf4; border: 1.5px solid #10b981; border-radius: 8px; padding: 12px; text-align: center; margin-top: 6px;'>
+                                                                        <span style='font-size: 38px; font-weight: 900; color: #10b981; line-height: 1;'>{appointment.QueueNumber}</span>
+                                                                        <p style='margin: 4px 0 0 0; font-size: 11px; color: #047857; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;'>Vui lòng đến trước 15 phút so với giờ hẹn</p>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
                                                     </td>
                                                 </tr>
                                             </table>
                                             
-                                             <p style='color: #64748b; font-size: 14px; line-height: 1.6;'>Vui lòng đến trước 15 phút để làm thủ tục. Mã tra cứu của bạn là: <b style='color: #0047AB;'>{appointment.Id.ToString().Substring(0, 8).ToUpper()}</b></p>
-                                             
-                                             <table border='0' cellpadding='0' cellspacing='0' width='100%' style='margin-top: 30px;'>
+                                             <!-- Action Button & QR -->
+                                             <table border='0' cellpadding='0' cellspacing='0' width='100%'>
                                                  <tr>
                                                      <td align='center'>
-                                                         <a href='http://localhost:5173/track?code={appointment.Id}' style='display: inline-block; background-color: #0047AB; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px;'>Xem chi tiết & Quản lý lịch hẹn</a>
-                                                        <div style='margin-top: 25px; text-align: center;'>
-                                                            <p style='font-size: 12px; color: #64748b; margin-bottom: 10px;'>Hoặc quét mã QR để check-in tại quầy:</p>
-                                                            <img src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={appointment.Id}' width='150' height='150' style='border: 8px solid #f8fafc; border-radius: 12px;' />
+                                                         <a href='http://103.72.99.53:3000/track?code={appointment.Id}' style='display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 16px 36px; text-decoration: none; border-radius: 8px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 12px rgba(37,99,235,0.2); letter-spacing: -0.2px;'>Tra Cứu & Quản Lý Lịch Hẹn</a>
+                                                        
+                                                        <div style='margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 28px; text-align: center;'>
+                                                            <p style='font-size: 13px; font-weight: 700; color: #475569; margin: 0 0 12px 0;'>Mã QR Check-in Nhanh Tại Quầy:</p>
+                                                            <img src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={appointment.Id}' width='140' height='140' style='border: 6px solid #f8fafc; border-radius: 12px; display: block; margin: 0 auto;' />
+                                                            <p style='font-size: 11px; color: #94a3b8; margin: 8px 0 0 0; font-weight: 500;'>Quét mã này tại Kiosk Lễ tân để check-in tức thời</p>
                                                         </div>
-                                                    </td>
-                                                </tr>
-                                            </table>
+                                                     </td>
+                                                 </tr>
+                                             </table>
                                         </td>
                                     </tr>
                                     <!-- Footer -->
                                     <tr>
-                                        <td bgcolor='#f8fafc' style='padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;'>
-                                            <p style='margin: 0; color: #64748b; font-size: 12px;'><b>Medicare Hospital</b></p>
-                                            <p style='margin: 5px 0; color: #94a3b8; font-size: 11px;'>Địa chỉ: 78 Giải Phóng, Đống Đa, Hà Nội</p>
-                                            <p style='margin: 0; color: #94a3b8; font-size: 11px;'>Hotline: 1900 6789</p>
+                                        <td bgcolor='#f8fafc' style='padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;'>
+                                            <p style='margin: 0; color: #0f172a; font-size: 14px; font-weight: 800;'>Bệnh viện Quốc tế Medicare</p>
+                                            <p style='margin: 6px 0; color: #64748b; font-size: 12px; font-weight: 500;'>Địa chỉ: 78 Giải Phóng, Đống Đa, Hà Nội</p>
+                                            <p style='margin: 0; color: #64748b; font-size: 12px; font-weight: 500;'>Hotline Hỗ Trợ: 1900 6789</p>
                                         </td>
                                     </tr>
                                 </table>
-                                <p style='margin-top: 20px; color: #94a3b8; font-size: 10px; text-align: center;'>Đây là thư tự động, vui lòng không trả lời.</p>
+                                <p style='margin-top: 24px; color: #94a3b8; font-size: 11px; text-align: center; font-weight: 500;'>Đây là thư thông báo tự động từ hệ thống Medicare Hospital. Vui lòng không phản hồi thư này.</p>
                             </td>
                         </tr>
                     </table>
                 </div>";
-                
-                await _emailService.SendEmailAsync(targetEmail, "Xác nhận lịch hẹn thành công - Medicare Hospital", emailBody);
+                await _emailService.SendEmailAsync(targetEmail, "Xác nhận lịch khám thành công - Medicare Hospital", emailBody);
             }
 
             return Ok(new

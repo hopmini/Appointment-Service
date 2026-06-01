@@ -94,18 +94,69 @@ namespace AppointmentService.Controllers
         [AllowAnonymous]
         public async Task<ActionResult> GetAvailableSlots(Guid id, [FromQuery] DateTime date)
         {
-            var slots = await _context.DoctorSlots
+            // 1. Kiểm tra bác sĩ có thật không
+            var doctorExists = await _context.Doctors.AnyAsync(d => d.Id == id);
+            if (!doctorExists) return NotFound("Méo tìm thấy bác sĩ này m ơi!");
+
+            var slotsList = await _context.DoctorSlots
                 .Where(s => s.DoctorId == id && s.Date.Date == date.Date)
                 .OrderBy(s => s.StartTime)
-                .Select(s => new {
-                    s.Id,
-                    s.StartTime,
-                    s.EndTime,
-                    s.IsBooked
-                })
                 .ToListAsync();
 
-            return Ok(slots);
+            // TỰ ĐỘNG CHỮA LÀNH/SINH LỊCH TỰ ĐỘNG NẾU BÁC SĨ CHƯA CÓ GIỜ KHÁM
+            if (slotsList.Count == 0)
+            {
+                var slotsToCreate = new List<DoctorSlot>();
+
+                // Khởi tạo ca SÁNG: 8:00 đến 11:30 (Mỗi ca 30p)
+                var startTimeMorning = new TimeSpan(8, 0, 0);
+                var endTimeMorning = new TimeSpan(11, 30, 0);
+                while (startTimeMorning < endTimeMorning)
+                {
+                    slotsToCreate.Add(new DoctorSlot
+                    {
+                        Id = Guid.NewGuid(),
+                        DoctorId = id,
+                        Date = date.Date,
+                        StartTime = startTimeMorning,
+                        EndTime = startTimeMorning.Add(TimeSpan.FromMinutes(30)),
+                        IsBooked = false
+                    });
+                    startTimeMorning = startTimeMorning.Add(TimeSpan.FromMinutes(30));
+                }
+
+                // Khởi tạo ca CHIỀU: 13:00 đến 16:30 (Mỗi ca 30p)
+                var startTimeAfternoon = new TimeSpan(13, 0, 0);
+                var endTimeAfternoon = new TimeSpan(16, 30, 0);
+                while (startTimeAfternoon < endTimeAfternoon)
+                {
+                    slotsToCreate.Add(new DoctorSlot
+                    {
+                        Id = Guid.NewGuid(),
+                        DoctorId = id,
+                        Date = date.Date,
+                        StartTime = startTimeAfternoon,
+                        EndTime = startTimeAfternoon.Add(TimeSpan.FromMinutes(30)),
+                        IsBooked = false
+                    });
+                    startTimeAfternoon = startTimeAfternoon.Add(TimeSpan.FromMinutes(30));
+                }
+
+                _context.DoctorSlots.AddRange(slotsToCreate);
+                await _context.SaveChangesAsync();
+                slotsList = slotsToCreate;
+            }
+
+            var result = slotsList.Select(s => new {
+                s.Id,
+                s.StartTime,
+                s.EndTime,
+                s.IsBooked
+            })
+            .OrderBy(s => s.StartTime)
+            .ToList();
+
+            return Ok(result);
         }
 
         // API 4: Lấy toàn bộ lịch trực hệ thống (Dùng cho trang Lịch trực hôm nay)
