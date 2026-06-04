@@ -29,9 +29,11 @@ namespace AppointmentService.Controllers
                 .Select(d => new DoctorResponseDto
                 {
                     Id = d.Id,
+                    UserId = d.UserId,
                     FullName = d.FullName,
                     Specialty = d.Specialty,
-                    ConsultationFee = d.ConsultationFee
+                    ConsultationFee = d.ConsultationFee,
+                    Degree = d.Degree
                 })
                 .ToListAsync();
 
