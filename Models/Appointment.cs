@@ -31,5 +31,8 @@ namespace AppointmentService.Models
 
         // Token dùng để tạo mã QR cho bệnh nhân quét
         public string QRToken { get; set; } = Guid.NewGuid().ToString("N"); // Triệu chứng note lại
+
+        // Thời gian khám dự kiến (phút)
+        public int ExaminationDuration { get; set; } = 30;
     }
 }

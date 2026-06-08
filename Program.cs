@@ -116,6 +116,17 @@ using (var scope = app.Services.CreateScope())
                 Console.WriteLine($"[Database Self-Heal Warning] {ex.Message}");
             }
 
+            // Tự động thêm cột ExaminationDuration nếu chưa có
+            try 
+            {
+                db.Database.ExecuteSqlRaw(@"ALTER TABLE ""Appointments"" ADD COLUMN IF NOT EXISTS ""ExaminationDuration"" integer NOT NULL DEFAULT 30;");
+                Console.WriteLine("🛡️ [Database Self-Heal] Đã kiểm tra và thêm cột ExaminationDuration vào bảng Appointments.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Database Self-Heal Warning for ExaminationDuration] {ex.Message}");
+            }
+
             connected = true;
             break;
         }

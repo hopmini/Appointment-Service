@@ -137,7 +137,8 @@ namespace AppointmentService.Controllers
                 SlotId = request.SlotId,
                 MedicalServiceId = request.MedicalServiceId,
                 Status = 0, // Trạng thái 0: Chờ tiếp tân duyệt và phát số thứ tự
-                Reason = request.Reason
+                Reason = request.Reason,
+                ExaminationDuration = request.ExaminationDuration > 0 ? request.ExaminationDuration : 30
             };
 
             _context.Appointments.Add(appointment);
@@ -186,7 +187,8 @@ namespace AppointmentService.Controllers
                     PatientName = _context.Users.Where(u => u.Id == a.PatientId).Select(u => u.FullName).FirstOrDefault(),
                     Date = a.Slot.Date,
                     Time = a.Slot.StartTime,
-                    Reason = a.Reason
+                    Reason = a.Reason,
+                    ExaminationDuration = a.ExaminationDuration
                 })
                 .ToListAsync();
 
@@ -353,12 +355,24 @@ namespace AppointmentService.Controllers
 
             if (appointment == null) return NotFound("Méo thấy đơn khám này m ơi!");
             
-            appointment.Status = 3; // Status 3 is Cancelled in standard track mapping (or 2 if Cancelled)
-            // Wait, in CancelAppointment above it set Status = 2. Let's keep appointment.Status = 2 for Cancelled to match Program/Duty queue
             appointment.Status = 2; // Cancelled
             if (appointment.Slot != null)
             {
                 appointment.Slot.IsBooked = false; // Release slot
+            }
+
+            // TẠO THÔNG BÁO CHO USER KHI HỦY
+            if (appointment.PatientId > 0)
+            {
+                var cancelNotif = new Notification
+                {
+                    UserId = appointment.PatientId,
+                    Title = "Lịch hẹn đã bị hủy",
+                    Message = $"Lịch hẹn ngày {appointment.Slot.Date:dd/MM/yyyy} lúc {appointment.Slot.StartTime:hh\\:mm} của bạn đã bị hủy.",
+                    Type = "error",
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Notifications.Add(cancelNotif);
             }
 
             await _context.SaveChangesAsync();
@@ -427,7 +441,8 @@ namespace AppointmentService.Controllers
                     Date = a.Slot.Date,
                     Time = a.Slot.StartTime,
                     Status = a.Status,
-                    QueueNumber = a.QueueNumber
+                    QueueNumber = a.QueueNumber,
+                    ExaminationDuration = a.ExaminationDuration
                 })
                 .ToListAsync();
 
@@ -473,7 +488,8 @@ namespace AppointmentService.Controllers
                 Date = a.Slot.Date,
                 Time = a.Slot.StartTime,
                 Status = a.Status,
-                QueueNumber = a.QueueNumber
+                QueueNumber = a.QueueNumber,
+                ExaminationDuration = a.ExaminationDuration
             });
         }
 
@@ -531,7 +547,8 @@ namespace AppointmentService.Controllers
                     Date = a.Slot.Date,
                     Time = a.Slot.StartTime,
                     a.Status,
-                    a.QueueNumber
+                    a.QueueNumber,
+                    ExaminationDuration = a.ExaminationDuration
                 })
                 .ToListAsync();
 
@@ -604,7 +621,8 @@ namespace AppointmentService.Controllers
                     a.Status,
                     a.QueueNumber,
                     ServiceName = a.MedicalService != null ? a.MedicalService.Name : "Khám chung",
-                    a.Reason
+                    a.Reason,
+                    ExaminationDuration = a.ExaminationDuration
                 })
                 .OrderBy(a => a.Date)
                 .ThenBy(a => a.StartTime)
