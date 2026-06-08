@@ -614,6 +614,7 @@ namespace AppointmentService.Controllers
                 .Select(a => new
                 {
                     a.Id,
+                    PatientId = a.PatientId,
                     PatientName = _context.Users.Where(u => u.Id == a.PatientId).Select(u => u.FullName).FirstOrDefault() ?? "Khách",
                     Date = a.Slot.Date,
                     a.Slot.StartTime,

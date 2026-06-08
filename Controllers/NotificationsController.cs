@@ -62,5 +62,35 @@ namespace AppointmentService.Controllers
             await _context.SaveChangesAsync();
             return Ok();
         }
+
+        // Tạo thông báo mới từ các dịch vụ khác (ví dụ: khi ghi xong bệnh án)
+        [HttpPost]
+        public async Task<IActionResult> CreateNotification([FromBody] NotificationDto dto)
+        {
+            if (dto == null) return BadRequest("Dữ liệu trống");
+
+            var notif = new Notification
+            {
+                Id = Guid.NewGuid(),
+                UserId = dto.UserId,
+                Title = dto.Title,
+                Message = dto.Message,
+                Type = dto.Type ?? "info",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Notifications.Add(notif);
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, notificationId = notif.Id });
+        }
+    }
+
+    public class NotificationDto
+    {
+        public int? UserId { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public string? Type { get; set; }
     }
 }

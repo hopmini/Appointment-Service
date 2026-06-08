@@ -46,6 +46,7 @@ services:
       JWT_SECRET: "CaiNayLaBiMatQuocGiaSieuCapVipPro123!"
       JWT_ISSUER: "ClinicAuthService"
       JWT_AUDIENCE: "ClinicUsers"
+      ConnectionStrings__IdentityConnection: "Host=postgres-appointment;Port=5432;Database=medicare_identity_db;Username=postgres;Password=Medicare@2024"
     depends_on:
       - appointment-service
     networks:
