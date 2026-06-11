@@ -67,6 +67,22 @@ namespace AppointmentService.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateNotification([FromBody] NotificationDto dto)
         {
+            return await CreateNotificationInternal(dto);
+        }
+
+        // Endpoint nội bộ cho service-to-service (không cần JWT)
+        [HttpPost("create-direct")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CreateNotificationDirect([FromBody] NotificationDto dto)
+        {
+            var apiKey = Request.Headers["X-Service-API-Key"].FirstOrDefault();
+            if (apiKey != "MedicareServiceInternalKey2024")
+                return Unauthorized(new { message = "Invalid service API key." });
+            return await CreateNotificationInternal(dto);
+        }
+
+        private async Task<IActionResult> CreateNotificationInternal(NotificationDto dto)
+        {
             if (dto == null) return BadRequest("Dữ liệu trống");
 
             var notif = new Notification

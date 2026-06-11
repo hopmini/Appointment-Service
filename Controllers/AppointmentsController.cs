@@ -130,6 +130,8 @@ namespace AppointmentService.Controllers
             slot.IsBooked = true;
 
             // 4. Viết đơn khám
+            var random = new Random();
+            var trackingNum = random.Next(100000, 999999);
             var appointment = new Appointment
             {
                 Id = Guid.NewGuid(),
@@ -138,7 +140,8 @@ namespace AppointmentService.Controllers
                 MedicalServiceId = request.MedicalServiceId,
                 Status = 0, // Trạng thái 0: Chờ tiếp tân duyệt và phát số thứ tự
                 Reason = request.Reason,
-                ExaminationDuration = request.ExaminationDuration > 0 ? request.ExaminationDuration : 30
+                ExaminationDuration = request.ExaminationDuration > 0 ? request.ExaminationDuration : 30,
+                QRToken = $"MC-{trackingNum}"
             };
 
             _context.Appointments.Add(appointment);
@@ -159,7 +162,7 @@ namespace AppointmentService.Controllers
                 _context.Notifications.Add(newNotif);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Chốt đơn thành công! Đợi tiếp tân duyệt nhé m.", appointmentId = appointment.Id });
+                return Ok(new { message = "Chốt đơn thành công! Đợi tiếp tân duyệt nhé m.", appointmentId = appointment.Id, qrToken = appointment.QRToken });
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -276,8 +279,8 @@ namespace AppointmentService.Controllers
                                                         <table border='0' cellpadding='0' cellspacing='0' width='100%'>
                                                             <tr>
                                                                 <td style='padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0; font-size: 14px;'>
-                                                                    <span style='color: #64748b; font-weight: 600;'>Mã số lịch hẹn:</span>
-                                                                    <span style='float: right; color: #2563eb; font-weight: 800;'>#{appointment.Id.ToString().Substring(0, 8).ToUpper()}</span>
+                                                                    <span style='color: #64748b; font-weight: 600;'>Mã số tra cứu (dễ nhớ):</span>
+                                                                    <span style='float: right; color: #2563eb; font-weight: 800;'>{appointment.QRToken}</span>
                                                                 </td>
                                                             </tr>
                                                             <tr>
@@ -310,11 +313,11 @@ namespace AppointmentService.Controllers
                                              <table border='0' cellpadding='0' cellspacing='0' width='100%'>
                                                  <tr>
                                                      <td align='center'>
-                                                         <a href='http://103.72.99.53:3000/track?code={appointment.Id}' style='display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 16px 36px; text-decoration: none; border-radius: 8px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 12px rgba(37,99,235,0.2); letter-spacing: -0.2px;'>Tra Cứu & Quản Lý Lịch Hẹn</a>
+                                                         <a href='http://103.72.99.53:3000/track?code={appointment.QRToken}' style='display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 16px 36px; text-decoration: none; border-radius: 8px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 12px rgba(37,99,235,0.2); letter-spacing: -0.2px;'>Tra Cứu & Quản Lý Lịch Hẹn</a>
                                                         
                                                         <div style='margin-top: 32px; border-top: 1px solid #e2e8f0; padding-top: 28px; text-align: center;'>
                                                             <p style='font-size: 13px; font-weight: 700; color: #475569; margin: 0 0 12px 0;'>Mã QR Check-in Nhanh Tại Quầy:</p>
-                                                            <img src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={appointment.Id}' width='140' height='140' style='border: 6px solid #f8fafc; border-radius: 12px; display: block; margin: 0 auto;' />
+                                                            <img src='https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={appointment.QRToken}' width='140' height='140' style='border: 6px solid #f8fafc; border-radius: 12px; display: block; margin: 0 auto;' />
                                                             <p style='font-size: 11px; color: #94a3b8; margin: 8px 0 0 0; font-weight: 500;'>Quét mã này tại Kiosk Lễ tân để check-in tức thời</p>
                                                         </div>
                                                      </td>
@@ -345,6 +348,39 @@ namespace AppointmentService.Controllers
                 queueNumber = appointment.QueueNumber
             });
         }
+
+        // API: Bác sĩ hoàn tất khám bệnh (Status = 3: Đã khám xong)
+        [HttpPut("{id}/complete")]
+        [Authorize(Roles = "Doctor,Admin")]
+        public async Task<IActionResult> CompleteAppointment(Guid id)
+        {
+            var appointment = await _context.Appointments
+                .Include(a => a.Slot)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (appointment == null) return NotFound("Không tìm thấy lịch hẹn này!");
+            if (appointment.Status != 1) return BadRequest("Lịch hẹn này chưa được duyệt hoặc đã xử lý rồi!");
+
+            appointment.Status = 3; // Status 3 = Đã khám xong
+
+            // TẠO THÔNG BÁO CHO BỆNH NHÂN
+            if (appointment.PatientId > 0)
+            {
+                var completeNotif = new Notification
+                {
+                    UserId = appointment.PatientId,
+                    Title = "Khám bệnh hoàn tất",
+                    Message = $"Buổi khám ngày {appointment.Slot?.Date:dd/MM/yyyy} đã hoàn tất. Bác sĩ đã ghi bệnh án và kê đơn thuốc (nếu có). Vui lòng kiểm tra mục Bệnh án & Hóa đơn.",
+                    Type = "success",
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Notifications.Add(completeNotif);
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Đã đánh dấu lịch hẹn hoàn tất khám bệnh.", appointmentId = id });
+        }
+
         [HttpPut("{id}/cancel")]
         [AllowAnonymous]
         public async Task<IActionResult> CancelAppointment(Guid id)
@@ -466,14 +502,14 @@ namespace AppointmentService.Controllers
                     .Include(x => x.MedicalService)
                     .FirstOrDefaultAsync(x => x.Id == guidId);
             }
-            else if (id.Length >= 6)
+            else
             {
-                var sid = id.ToLower();
+                var sid = id.Trim().ToLower();
                 a = await _context.Appointments
                     .Include(x => x.Slot)
                     .ThenInclude(s => s.Doctor)
                     .Include(x => x.MedicalService)
-                    .FirstOrDefaultAsync(x => x.Id.ToString().ToLower().StartsWith(sid));
+                    .FirstOrDefaultAsync(x => x.QRToken.ToLower() == sid || x.Id.ToString().ToLower().StartsWith(sid));
             }
 
             if (a == null) return NotFound("Không tìm thấy lịch hẹn. Vui lòng kiểm tra lại mã.");
@@ -481,6 +517,7 @@ namespace AppointmentService.Controllers
             return Ok(new
             {
                 a.Id,
+                a.QRToken,
                 PatientName = _context.Users.Where(u => u.Id == a.PatientId).Select(u => u.FullName).FirstOrDefault() ?? "Khách",
                 DoctorName = a.Slot.Doctor.FullName,
                 DoctorId = a.Slot.DoctorId,
